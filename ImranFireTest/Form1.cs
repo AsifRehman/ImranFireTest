@@ -402,6 +402,10 @@ Ledger_Delete()
 
         private async void button2_Click(object sender, EventArgs e)
         {
+            await UpdateAll();
+        }
+        async Task UpdateAll()
+        {
             try
             {
                 lblStat.Text = "Running Party_Update Batch Operation";
@@ -422,6 +426,25 @@ Ledger_Delete()
                 lblStat.Text = ex.ToString();
                 lblStat.ForeColor = Color.Red;
             }
+
+        }
+        private async void timer1_Tick(object sender, EventArgs e)
+        {
+            lblStat.Text = "Starting to sync with cloud";
+            lblStat.ForeColor = Color.DarkGreen;
+            await Task.Delay(1000);
+            await UpdateAll();
+
+        }
+
+        private void btnStartTimer_Click(object sender, EventArgs e)
+        {
+            timer1.Enabled = true;
+        }
+
+        private void btnStopTimer_Click(object sender, EventArgs e)
+        {
+            timer1.Enabled = false;
         }
     }
 }
