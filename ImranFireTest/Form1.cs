@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
@@ -16,10 +17,10 @@ namespace ImranFireTest
     public partial class Form1 : Form
     {
         FirestoreDb db;
-        string party_ts = "0";
-        string party_del_id = "0";
-        string ledger_ts = "0";
-        string ledger_del_id = "0";
+        static string party_ts = "0";
+        static string party_del_id = "0";
+        static string ledger_ts = "0";
+        static string ledger_del_id = "0";
 
         public Form1()
         {
@@ -28,11 +29,15 @@ namespace ImranFireTest
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            string path = AppDomain.CurrentDomain.BaseDirectory + @"fire.json";
+            var fireStoreJsonFile = ConfigurationManager.AppSettings["fireStoreJsonFile"];
+            string path = AppDomain.CurrentDomain.BaseDirectory + fireStoreJsonFile;
             Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", path);
+            var fireStoreName = ConfigurationManager.AppSettings["FireStoreName"];
 
-            db = FirestoreDb.Create("flu-fires");
-            MessageBox.Show("connected");
+            db = FirestoreDb.Create(fireStoreName);
+            //MessageBox.Show("connected");
+            lblStat.Text = "Connected";
+            lblStat.ForeColor = Color.DarkGreen;
 
         }
 
@@ -49,7 +54,7 @@ namespace ImranFireTest
         }
 
         #region "Party Update"
-        private async void Party_Update()
+        private async Task Party_Update()
         {
             if (party_ts == "0")
             {
@@ -69,12 +74,12 @@ namespace ImranFireTest
                     }
                 }
             }
-            string connetionString = null;
+            string connetionString;
             SqlConnection sqlCnn;
             SqlCommand sqlCmd;
             string sql;
 
-            connetionString = "Server=FAREED\\SQLEXPRESS;Database=ACCOUNT19;User Id=web;Password=wb;";
+            connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
             sql = "SELECT PartyNameID, PartyName, PartyTypeID,  Debit, Credit, CAST(ts AS INT) ts FROM tbl_Party WHERE ts>" + party_ts + " ORDER BY ts";
 
             sqlCnn = new SqlConnection(connetionString);
@@ -135,7 +140,8 @@ namespace ImranFireTest
                 if (!isSame) await doc.SetAsync(upd);
             }
         }
-        private async void Party_Delete()
+        private async Task
+Party_Delete()
         {
             if (party_del_id == "0")
             {
@@ -156,7 +162,7 @@ namespace ImranFireTest
             SqlCommand sqlCmd;
             string sql;
 
-            connetionString = "Server=FAREED\\SQLEXPRESS;Database=ACCOUNT19;User Id=web;Password=wb;";
+            connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
             sql = "SELECT id, delID FROM tbl_Party_Del WHERE id>" + party_del_id + " ORDER BY id";
 
             sqlCnn = new SqlConnection(connetionString);
@@ -206,7 +212,7 @@ namespace ImranFireTest
         #endregion
 
         #region "Ledger Update"
-        private async void Ledger_Update()
+        private async Task Ledger_Update()
         {
             if (ledger_ts == "0")
             {
@@ -232,7 +238,7 @@ namespace ImranFireTest
             SqlCommand sqlCmd;
             string sql;
 
-            connetionString = "Server=FAREED\\SQLEXPRESS;Database=ACCOUNT19;User Id=web;Password=wb;";
+            connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
             sql = "SELECT Id, PartyID, VocNo,  Date, TType, Description, NetDebit as Debit, NetCredit as Credit, CAST(ts AS INT) ts FROM tbl_Ledger WHERE ts>" + ledger_ts + " ORDER BY ts";
 
             sqlCnn = new SqlConnection(connetionString);
@@ -323,6 +329,54 @@ namespace ImranFireTest
                 if (!isSame) await doc.SetAsync(upd);
             }
         }
+        private async Task
+Ledger_Delete()
+        {
+            if (ledger_del_id == "0")
+            {
+                DocumentReference doc = db.Collection("DelRecord").Document("del");
+                DocumentSnapshot snp = await doc.GetSnapshotAsync();
+                if (!snp.Exists)
+                {
+                    ledger_del_id = "0";
+                }
+                else
+                {
+                    Dictionary<string, object> del = snp.ToDictionary();
+                    ledger_del_id = del["LedgerId"].ToString();
+                }
+            }
+            string connetionString = null;
+            SqlConnection sqlCnn;
+            SqlCommand sqlCmd;
+            string sql;
+            connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
+            sql = "SELECT id, delID FROM tbl_Ledger_Del WHERE id>" + ledger_del_id + " ORDER BY id";
+
+            sqlCnn = new SqlConnection(connetionString);
+            try
+            {
+                sqlCnn.Open();
+                sqlCmd = new SqlCommand(sql, sqlCnn);
+                SqlDataReader sqlReader = sqlCmd.ExecuteReader();
+                while (sqlReader.Read())
+                {
+                    DelTable p = new DelTable();
+                    p.Id = sqlReader.GetInt32(0);
+                    p.DelID = sqlReader.GetInt32(1);
+                    Delete_Ledger_Store(p);
+                }
+                sqlReader.Close();
+                sqlCmd.Dispose();
+                sqlCnn.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Can not open connection ! " + ex.ToString());
+            }
+
+        }
+
         private async void Delete_Ledger_Store(DelTable d)
         {
             Query qry = db.Collection("Ledger").WhereEqualTo("Id", d.DelID);
@@ -346,11 +400,28 @@ namespace ImranFireTest
         }
         #endregion
 
-        private void button2_Click(object sender, EventArgs e)
+        private async void button2_Click(object sender, EventArgs e)
         {
-            Ledger_Update();
-            //Party_Update();
-//            Party_Delete();
+            try
+            {
+                lblStat.Text = "Running Party_Update Batch Operation";
+                lblStat.ForeColor = Color.LightGoldenrodYellow;
+                await Party_Update();
+                lblStat.Text = "Running Ledger_Update Batch Operation";
+                await Ledger_Update();
+                lblStat.Text = "Running Party_Delete Batch Operation";
+                await Party_Delete();
+                lblStat.Text = "Running Ledger_Delete Batch Operation";
+                await Ledger_Delete();
+                lblStat.Text = "All Batch Operations Completed.";
+                lblStat.ForeColor = Color.DarkGreen;
+            }
+            catch (Exception ex)
+            {
+
+                lblStat.Text = ex.ToString();
+                lblStat.ForeColor = Color.Red;
+            }
         }
     }
 }
