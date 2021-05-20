@@ -46,6 +46,7 @@ namespace ImranFireTest
             this.button1.TabIndex = 0;
             this.button1.Text = "Auto ID Insert";
             this.button1.UseVisualStyleBackColor = true;
+            this.button1.Visible = false;
             this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // button2
@@ -68,7 +69,6 @@ namespace ImranFireTest
             // 
             // timer1
             // 
-            this.timer1.Enabled = true;
             this.timer1.Interval = 5000;
             this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
             // 
@@ -84,6 +84,7 @@ namespace ImranFireTest
             // 
             // btnStopTimer
             // 
+            this.btnStopTimer.Enabled = false;
             this.btnStopTimer.Location = new System.Drawing.Point(491, 72);
             this.btnStopTimer.Name = "btnStopTimer";
             this.btnStopTimer.Size = new System.Drawing.Size(194, 23);

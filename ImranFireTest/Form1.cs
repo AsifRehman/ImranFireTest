@@ -43,13 +43,7 @@ namespace ImranFireTest
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            Query qry = db.Collection("Party").WhereEqualTo("id", 243020001);
-            QuerySnapshot snp = await qry.GetSnapshotAsync();
-            foreach (DocumentSnapshot dc in snp.Documents)
-            {
-                Console.WriteLine(dc.Id);
-
-            }
+            await Ledger_Delete();
 
         }
 
@@ -122,6 +116,7 @@ namespace ImranFireTest
             {
                 CollectionReference doc = db.Collection("Party");
                 await doc.AddAsync(p);
+                party_ts = p.ts.ToString();
             }
         }
         private async void Update_Party_Store(string docID, Party upd)
@@ -137,15 +132,18 @@ namespace ImranFireTest
                 if (isSame) isSame = cur.Debit == upd.Debit;
                 if (isSame) isSame = cur.Credit == upd.Credit;
                 if (isSame) isSame = cur.ts == upd.ts;
-                if (!isSame) await doc.SetAsync(upd);
+                if (!isSame)
+                {
+                    await doc.SetAsync(upd);
+                    party_ts = upd.ts.ToString();
+                }
             }
         }
-        private async Task
-Party_Delete()
+        private async Task Party_Delete()
         {
             if (party_del_id == "0")
             {
-                DocumentReference doc = db.Collection("DelRecord").Document("del");
+                DocumentReference doc = db.Collection("DelRecord").Document("Del");
                 DocumentSnapshot snp = await doc.GetSnapshotAsync();
                 if (!snp.Exists)
                 {
@@ -178,6 +176,7 @@ Party_Delete()
                     p.DelID = sqlReader.GetInt32(1);
                     Delete_Party_Store(p);
                 }
+
                 sqlReader.Close();
                 sqlCmd.Dispose();
                 sqlCnn.Close();
@@ -197,17 +196,15 @@ Party_Delete()
             {
                 DocumentReference doc = db.Collection("Party").Document(documentSnapshot.Id);
                 await doc.DeleteAsync();
-            }
 
-            DocumentReference delDoc = db.Collection("DelRecord").Document("del");
-            DocumentSnapshot snp = await delDoc.GetSnapshotAsync();
-            if (snp.Exists)
-            {
-                DelRecord upd = snp.ConvertTo<DelRecord>();
-                upd.PartyId = p.Id;
-                await delDoc.SetAsync(upd);
-                party_del_id = p.Id.ToString();
             }
+            party_del_id = p.Id.ToString();
+
+            DocumentReference delDoc = db.Collection("DelRecord").Document("Del");
+            Dictionary<string, object> d = new Dictionary<string, object>();
+            d.Add("PartyId", party_del_id);
+            await delDoc.UpdateAsync(d);
+
         }
         #endregion
 
@@ -228,12 +225,12 @@ Party_Delete()
                 {
                     foreach (DocumentSnapshot dc in querySnapshot.Documents)
                     {
-                        Dictionary<string, object> _party = dc.ToDictionary();
-                        ledger_ts = _party["ts"].ToString();
+                        Dictionary<string, object> _ledger = dc.ToDictionary();
+                        ledger_ts = _ledger["ts"].ToString();
                     }
                 }
             }
-            string connetionString = null;
+            string connetionString;
             SqlConnection sqlCnn;
             SqlCommand sqlCmd;
             string sql;
@@ -298,6 +295,7 @@ Party_Delete()
             {
                 CollectionReference doc = db.Collection("Ledger");
                 await doc.AddAsync(g);
+                ledger_ts = g.ts.ToString();
             }
         }
 
@@ -329,12 +327,11 @@ Party_Delete()
                 if (!isSame) await doc.SetAsync(upd);
             }
         }
-        private async Task
-Ledger_Delete()
+        private async Task Ledger_Delete()
         {
             if (ledger_del_id == "0")
             {
-                DocumentReference doc = db.Collection("DelRecord").Document("del");
+                DocumentReference doc = db.Collection("DelRecord").Document("Del");
                 DocumentSnapshot snp = await doc.GetSnapshotAsync();
                 if (!snp.Exists)
                 {
@@ -365,6 +362,7 @@ Ledger_Delete()
                     p.Id = sqlReader.GetInt32(0);
                     p.DelID = sqlReader.GetInt32(1);
                     Delete_Ledger_Store(p);
+
                 }
                 sqlReader.Close();
                 sqlCmd.Dispose();
@@ -387,16 +385,12 @@ Ledger_Delete()
                 DocumentReference doc = db.Collection("Ledger").Document(documentSnapshot.Id);
                 await doc.DeleteAsync();
             }
+            ledger_del_id = d.Id.ToString();
 
-            DocumentReference delDoc = db.Collection("DelRecord").Document("del");
-            DocumentSnapshot snp = await delDoc.GetSnapshotAsync();
-            if (snp.Exists)
-            {
-                DelRecord upd = snp.ConvertTo<DelRecord>();
-                upd.LedgerId = d.Id;
-                await delDoc.SetAsync(upd);
-                party_del_id = d.Id.ToString();
-            }
+            DocumentReference delDoc = db.Collection("DelRecord").Document("Del");
+            Dictionary<string, object> data = new Dictionary<string, object>();
+            data.Add("LedgerId", ledger_del_id);
+            await delDoc.UpdateAsync(data);
         }
         #endregion
 
@@ -440,11 +434,16 @@ Ledger_Delete()
         private void btnStartTimer_Click(object sender, EventArgs e)
         {
             timer1.Enabled = true;
+            btnStopTimer.Enabled = true;
+            btnStartTimer.Enabled = false;
         }
 
         private void btnStopTimer_Click(object sender, EventArgs e)
         {
             timer1.Enabled = false;
+            btnStopTimer.Enabled = false;
+            btnStartTimer.Enabled = true;
+
         }
     }
 }
