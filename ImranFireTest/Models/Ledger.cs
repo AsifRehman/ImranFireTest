@@ -15,7 +15,7 @@ namespace ImranFireTest.Models
         [FirestoreProperty]
         public int PartyID { get; set; }
         [FirestoreProperty]
-        public int VocNo { get; set; }
+        public int? VocNo { get; set; }
         [FirestoreProperty]
         public DateTime Date { get; set; }
         [FirestoreProperty]

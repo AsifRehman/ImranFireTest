@@ -74,7 +74,7 @@ namespace ImranFireTest
             string sql;
 
             connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
-            sql = "SELECT PartyNameID, PartyName, PartyTypeID,  Debit, Credit, CAST(ts AS INT) ts FROM tbl_Party WHERE ts>" + party_ts + " ORDER BY ts";
+            sql = "SELECT * FROM web_vw_party WHERE ts>" + party_ts + " ORDER BY ts";
 
             sqlCnn = new SqlConnection(connetionString);
             try
@@ -236,7 +236,7 @@ namespace ImranFireTest
             string sql;
 
             connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
-            sql = "SELECT Id, PartyID, VocNo,  Date, TType, Description, NetDebit as Debit, NetCredit as Credit, CAST(ts AS INT) ts FROM tbl_Ledger WHERE ts>" + ledger_ts + " ORDER BY ts";
+            sql = "SELECT * FROM Web_vw_Ledger WHERE ts>" + ledger_ts + " ORDER BY ts";
 
             sqlCnn = new SqlConnection(connetionString);
             try
@@ -249,7 +249,15 @@ namespace ImranFireTest
                     Ledger g = new Ledger();
                     g.Id = sqlReader.GetInt32(0);
                     g.PartyID = sqlReader.GetInt32(1);
-                    g.VocNo = sqlReader.GetInt32(2);
+                    if (sqlReader.IsDBNull(2))
+                    {
+                        g.VocNo = null;
+                    }
+                    else
+                    {
+                        g.VocNo = sqlReader.GetInt32(2);
+                    }
+
                     g.Date = sqlReader.GetDateTime(3).ToUniversalTime();
                     g.TType = sqlReader.GetString(4);
                     g.Description = sqlReader.IsDBNull(5) ? null : sqlReader.GetString(5);
