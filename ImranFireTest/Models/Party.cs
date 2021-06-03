@@ -1,26 +1,22 @@
-﻿using Google.Cloud.Firestore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MongoDB.Bson.Serialization.Attributes;
 
 namespace ImranFireTest.Models
 {
-    [FirestoreData]
     class Party
     {
-        [FirestoreProperty]
+        [BsonId]
+        public int __Id { get; set; }
+        [BsonElement("Id")]
         public int Id { get; set; }
-        [FirestoreProperty]
+        [BsonElement("PartyName")]
         public string PartyName { get; set; }
-        [FirestoreProperty("PartyTypeId")]
+        [BsonElement("PartyTypeId")]
         public int PartyTypeId { get; set; }
-        [FirestoreProperty]
+        [BsonElement("Debit")]
         public int Debit { get; set; }
-        [FirestoreProperty]
+        [BsonElement("Credit")]
         public int Credit { get; set; }
-        [FirestoreProperty]
+        [BsonElement("ts")]
         public int ts { get; set; }
 
     }

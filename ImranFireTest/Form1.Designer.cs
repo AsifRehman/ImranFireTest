@@ -37,7 +37,6 @@ namespace ImranFireTest
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.btnStartTimer = new System.Windows.Forms.Button();
             this.btnStopTimer = new System.Windows.Forms.Button();
-            this.colorDialog1 = new System.Windows.Forms.ColorDialog();
             this.panel1 = new System.Windows.Forms.Panel();
             this.label1 = new System.Windows.Forms.Label();
             this.panel2 = new System.Windows.Forms.Panel();
@@ -138,7 +137,6 @@ namespace ImranFireTest
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackgroundImage = global::ImranFireTest.Properties.Resources.background;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this.ClientSize = new System.Drawing.Size(777, 450);
             this.Controls.Add(this.panel2);
@@ -167,7 +165,6 @@ namespace ImranFireTest
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.Button btnStartTimer;
         private System.Windows.Forms.Button btnStopTimer;
-        private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Panel panel2;

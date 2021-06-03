@@ -11,12 +11,17 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Google.Cloud.Firestore;
 using ImranFireTest.Models;
+using MongoDB.Driver;
+using MongoDB.Bson;
 
 namespace ImranFireTest
 {
     public partial class Form1 : Form
     {
-        FirestoreDb db;
+        string connString = "mongodb://asif:Abc123?@cluster0-shard-00-00.k6lme.mongodb.net:27017,cluster0-shard-00-01.k6lme.mongodb.net:27017,cluster0-shard-00-02.k6lme.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-9yuzik-shard-0&authSource=admin&retryWrites=true&w=majority";
+        string dbName = ConfigurationManager.AppSettings["DbName"];
+        MongoClient dbClient;
+
         static string party_ts = "0";
         static string party_del_id = "0";
         static string ledger_ts = "0";
@@ -29,12 +34,7 @@ namespace ImranFireTest
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            var fireStoreJsonFile = ConfigurationManager.AppSettings["fireStoreJsonFile"];
-            string path = AppDomain.CurrentDomain.BaseDirectory + fireStoreJsonFile;
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", path);
-            var fireStoreName = ConfigurationManager.AppSettings["FireStoreName"];
 
-            db = FirestoreDb.Create(fireStoreName);
             //MessageBox.Show("connected");
             lblStat.Text = "Connected";
             lblStat.ForeColor = Color.DarkGreen;
@@ -50,9 +50,13 @@ namespace ImranFireTest
         #region "Party Update"
         private async Task Party_Update()
         {
+
             if (party_ts == "0")
             {
-                CollectionReference col = db.Collection("Party");
+                var database = dbClient.GetDatabase(ConfigurationManager.AppSettings["Db"]);
+                var col = database.GetCollection<BsonDocument>("Party");
+                var list = col.Aggregate().SortByDescending((a) => a["ts"]).First();
+
                 Query qry = col.OrderByDescending("ts").Limit(1);
                 QuerySnapshot querySnapshot = await qry.GetSnapshotAsync();
                 if (querySnapshot.Count == 0)
