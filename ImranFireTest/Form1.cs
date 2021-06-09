@@ -9,18 +9,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Google.Cloud.Firestore;
-using ImranFireTest.Models;
+using ImranFireTest.Model;
 
 namespace ImranFireTest
 {
     public partial class Form1 : Form
     {
-        FirestoreDb db;
+        //FirestoreDb db;
         static string party_ts = "0";
-        static string party_del_id = "0";
+        static string party_del_ts = "0";
         static string ledger_ts = "0";
-        static string ledger_del_id = "0";
+        static string ledger_del_ts = "0";
+        static MongoHelper db;
 
         public Form1()
         {
@@ -29,380 +29,195 @@ namespace ImranFireTest
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            var fireStoreJsonFile = ConfigurationManager.AppSettings["fireStoreJsonFile"];
-            string path = AppDomain.CurrentDomain.BaseDirectory + fireStoreJsonFile;
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", path);
-            var fireStoreName = ConfigurationManager.AppSettings["FireStoreName"];
+            //Initialize MongoDb
+            string dbName=  ConfigurationManager.AppSettings["DbName"];
+            db = new MongoHelper(dbName);
 
-            db = FirestoreDb.Create(fireStoreName);
-            //MessageBox.Show("connected");
-            lblStat.Text = "Connected";
+            lblStat.Text = "Initialized";
             lblStat.ForeColor = Color.DarkGreen;
+        }
+
+        #region Party Update Algorithm
+        private async Task PartyUpdate()
+        {
+            //1
+            party_ts = db.MaxTs("Party");
+            //2
+            SqlHelper h = new SqlHelper();
+            SqlDataReader dr = h.GetReaderBySQL("SELECT * FROM web_vw_party WHERE ts>" + party_ts + " Order By ts");
+            //3
+            while (dr.Read())
+            {
+                Console.WriteLine(dr.GetString(1));
+                AddToPartyCollection(dr);
+            }
+            dr.Close();
+            Console.WriteLine("Party TimeStamp: " + party_ts);
+            ///////////////////////////////////////////////////END PARTY ALGORITHM/////////////////////////////////////////////////////////////////
+            lblStat.Text = "Running Party_Update Batch Operation till " + party_ts + " timestamp";
 
         }
+        private static void AddToPartyCollection(SqlDataReader sqlReader)
+        {
+            Party p = new Party();
+            p.Id = sqlReader.GetInt32(0);
+            p.PartyName = sqlReader.GetString(1);
+            p.PartyTypeId = sqlReader.GetInt32(2);
+            p.Debit = (sqlReader[3] as int?).GetValueOrDefault();
+            p.Credit = (sqlReader[4] as int?).GetValueOrDefault();
+            p.ts = sqlReader.GetInt32(5);
+            var result = db.LoadRecordById<Party>("Party", p.Id);
+            if (result == null)
+                db.InsertRecord<Party>("Party", p);
+            else
+                db.UpsertRecord<Party>("Party", result._Id, p);
+            party_ts = p.ts.ToString();
+        }
+
+        #endregion
+
+        #region Party Delete Algorithm
+        private async Task PartyDelete()
+        {
+            ////////////////////////////////////////////////////////PARTY DEL ALGORITHM////////////////////////////////////////////////////////////////
+            /* ALGORITHM
+            1.Get Max Ts
+            2.Get Results From SqlServer > ts
+            3.loop start
+                AddParty() Method
+            4.loop end
+            */
+            ////////////////////////////////////////////////////////PARTY ALGORITHM////////////////////////////////////////////////////////////////
+            //1
+            party_del_ts = db.MaxTs("PartyDel");
+            //2
+            SqlHelper h = new SqlHelper();
+            SqlDataReader dr = h.GetReaderBySQL("SELECT * FROM web_vw_party_del WHERE ts>" + party_del_ts + " Order By ts");
+            //3
+            while (dr.Read())
+            {
+                Console.WriteLine(dr.GetString(1));
+                AddToPartyDelCollection(dr);
+            }
+            dr.Close();
+            Console.WriteLine("Party Del TimeStamp: " + party_del_ts);
+            ///////////////////////////////////////////////////END PARTY ALGORITHM/////////////////////////////////////////////////////////////////
+            lblStat.Text = "Running Party_Delete Batch Operation till " + party_del_ts + " timestamp";
+        }
+
+        private static void AddToPartyDelCollection(SqlDataReader sqlReader)
+        {
+            PartyDelLog p = new PartyDelLog();
+            p.DelId = sqlReader.GetInt32(0);
+            p.ts = sqlReader.GetInt32(1);
+            db.InsertRecord<PartyDelLog>("PartyDelLog", p);
+            db.DeleteRecord<Party>("Party", p.DelId);
+            party_del_ts = p.ts.ToString();
+        }
+        #endregion
+
+        #region Ledger Update Algorithm
+        private async Task LedgerUpdate()
+        {
+            ////////////////////////////////////////////////////////Ledger ALGORITHM////////////////////////////////////////////////////////////////
+            //1
+            ledger_ts = db.MaxTs("Ledger");
+            //2
+            SqlHelper h = new SqlHelper();
+            SqlDataReader dr = h.GetReaderBySQL("SELECT * FROM web_vw_ledger WHERE ts>" + ledger_ts + " Order By ts");
+            //3
+            while (dr.Read())
+            {
+                Console.WriteLine(dr.GetString(1));
+                AddToLedgerCollection(dr);
+            }
+            dr.Close();
+            Console.WriteLine("Party TimeStamp: " + party_ts);
+            ///////////////////////////////////////////////////END PARTY ALGORITHM/////////////////////////////////////////////////////////////////
+            lblStat.Text = "Running Ledger_Update Batch Operation till " + ledger_ts + " timestamp";
+        }
+
+        private static void AddToLedgerCollection(SqlDataReader sqlReader)
+        {
+            Ledger g = new Ledger();
+            g.Id = sqlReader.GetInt32(0);
+            g.PartyID = sqlReader.GetInt32(1);
+            if (sqlReader.IsDBNull(2))
+            {
+                g.VocNo = null;
+            }
+            else
+            {
+                g.VocNo = sqlReader.GetInt32(2);
+            }
+
+            g.Date = sqlReader.GetDateTime(3).ToUniversalTime();
+            g.TType = sqlReader.GetString(4);
+            g.Description = sqlReader.IsDBNull(5) ? null : sqlReader.GetString(5);
+            if (sqlReader.IsDBNull(6))
+            {
+                g.Debit = null;
+            }
+            else
+            {
+                g.Debit = sqlReader.GetInt64(6);
+            }
+            if (sqlReader.IsDBNull(7))
+            {
+                g.Credit = null;
+            }
+            else
+            {
+                g.Credit = sqlReader.GetInt64(7);
+            }
+            g.ts = sqlReader.GetInt32(8);
+            var result = db.LoadRecordById<Ledger>("Ledger", g.Id);
+            if (result == null)
+                db.InsertRecord<Ledger>("Ledger", g);
+            else
+                db.UpsertRecord<Ledger>("Ledger", result._Id, g);
+            ledger_ts = g.ts.ToString();
+        }
+
+        #endregion
+
+        #region Ledger Delete Algorithm
+        private async Task LedgerDelete()
+        {
+            //1
+            ledger_del_ts = db.MaxTs("LedgerDelLog");
+            //2
+            SqlHelper h = new SqlHelper();
+            SqlDataReader dr = h.GetReaderBySQL("SELECT * FROM tbl_ledger_del WHERE ts>" + ledger_del_ts + " Order By ts");
+            //3
+            while (dr.Read())
+            {
+                Console.WriteLine(dr.GetString(1));
+                AddToLedgerDelCollection(dr);
+            }
+            dr.Close();
+            Console.WriteLine("Ledger Del TimeStamp: " + ledger_del_ts);
+            ///////////////////////////////////////////////////END PARTY ALGORITHM/////////////////////////////////////////////////////////////////
+            lblStat.Text = "Running Ledger_Delete Batch Operation till " + ledger_del_ts + " timestamp";
+        }
+
+        private static void AddToLedgerDelCollection(SqlDataReader sqlReader)
+        {
+            LedgerDelLog p = new LedgerDelLog();
+            p.DelId = sqlReader.GetInt32(0);
+            p.ts = sqlReader.GetInt32(1);
+            db.InsertRecord<LedgerDelLog>("PartyDelLog", p);
+            db.DeleteRecord<Ledger>("Ledger", p.DelId);
+            ledger_del_ts = p.ts.ToString();
+        }
+        #endregion
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            await Ledger_Delete();
-
+            await PartyDelete();
         }
 
-        #region "Party Update"
-        private async Task Party_Update()
-        {
-            if (party_ts == "0")
-            {
-                CollectionReference col = db.Collection("Party");
-                Query qry = col.OrderByDescending("ts").Limit(1);
-                QuerySnapshot querySnapshot = await qry.GetSnapshotAsync();
-                if (querySnapshot.Count == 0)
-                {
-                    party_ts = "0";
-                }
-                else
-                {
-                    foreach (DocumentSnapshot dc in querySnapshot.Documents)
-                    {
-                        Dictionary<string, object> _party = dc.ToDictionary();
-                        party_ts = _party["ts"].ToString();
-                    }
-                }
-            }
-            string connetionString;
-            SqlConnection sqlCnn;
-            SqlCommand sqlCmd;
-            string sql;
-
-            connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
-            sql = "SELECT * FROM web_vw_party WHERE ts>" + party_ts + " ORDER BY ts";
-
-            sqlCnn = new SqlConnection(connetionString);
-            try
-            {
-                sqlCnn.Open();
-                sqlCmd = new SqlCommand(sql, sqlCnn);
-                SqlDataReader sqlReader = sqlCmd.ExecuteReader();
-                while (sqlReader.Read())
-                {
-                    Party p = new Party();
-                    p.Id = sqlReader.GetInt32(0);
-                    p.PartyName = sqlReader.GetString(1);
-                    p.PartyTypeId = sqlReader.GetInt32(2);
-                    p.Debit = (sqlReader[3] as int?).GetValueOrDefault();
-                    p.Credit = (sqlReader[4] as int?).GetValueOrDefault();
-                    p.ts = sqlReader.GetInt32(5);
-
-                    AddOrUpdate_Party_Store(p);
-                }
-                sqlReader.Close();
-                sqlCmd.Dispose();
-                sqlCnn.Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Can not open connection ! " + ex.ToString());
-            }
-
-        }
-        private async void AddOrUpdate_Party_Store(Party p)
-        {
-            Query qry = db.Collection("Party").WhereEqualTo("Id", p.Id);
-            QuerySnapshot snp = await qry.GetSnapshotAsync();
-            if (snp.Count() > 0)
-            {
-                Update_Party_Store(snp.Documents[0].Id, p);
-            }
-            else
-            {
-                CollectionReference doc = db.Collection("Party");
-                await doc.AddAsync(p);
-                party_ts = p.ts.ToString();
-            }
-        }
-        private async void Update_Party_Store(string docID, Party upd)
-        {
-            DocumentReference doc = db.Collection("Party").Document(docID);
-            DocumentSnapshot snp = await doc.GetSnapshotAsync();
-            if (snp.Exists)
-            {
-                Party cur = snp.ConvertTo<Party>();
-                bool isSame = cur.Id == upd.Id;
-                if (isSame) isSame = cur.PartyName == upd.PartyName;
-                if (isSame) isSame = cur.PartyTypeId == upd.PartyTypeId;
-                if (isSame) isSame = cur.Debit == upd.Debit;
-                if (isSame) isSame = cur.Credit == upd.Credit;
-                if (isSame) isSame = cur.ts == upd.ts;
-                if (!isSame)
-                {
-                    await doc.SetAsync(upd);
-                    party_ts = upd.ts.ToString();
-                }
-            }
-        }
-        private async Task Party_Delete()
-        {
-            if (party_del_id == "0")
-            {
-                DocumentReference doc = db.Collection("DelRecord").Document("Del");
-                DocumentSnapshot snp = await doc.GetSnapshotAsync();
-                if (!snp.Exists)
-                {
-                    party_del_id = "0";
-                }
-                else
-                {
-                    Dictionary<string, object> del = snp.ToDictionary();
-                    party_del_id = del["PartyId"].ToString();
-                }
-            }
-            string connetionString = null;
-            SqlConnection sqlCnn;
-            SqlCommand sqlCmd;
-            string sql;
-
-            connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
-            sql = "SELECT id, delID FROM tbl_Party_Del WHERE id>" + party_del_id + " ORDER BY id";
-
-            sqlCnn = new SqlConnection(connetionString);
-            try
-            {
-                sqlCnn.Open();
-                sqlCmd = new SqlCommand(sql, sqlCnn);
-                SqlDataReader sqlReader = sqlCmd.ExecuteReader();
-                while (sqlReader.Read())
-                {
-                    DelTable p = new DelTable();
-                    p.Id = sqlReader.GetInt32(0);
-                    p.DelID = sqlReader.GetInt32(1);
-                    Delete_Party_Store(p);
-                }
-
-                sqlReader.Close();
-                sqlCmd.Dispose();
-                sqlCnn.Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Can not open connection ! " + ex.ToString());
-            }
-
-        }
-        private async void Delete_Party_Store(DelTable p)
-        {
-            Query qry = db.Collection("Party").WhereEqualTo("Id", p.DelID);
-            QuerySnapshot q = await qry.GetSnapshotAsync();
-
-            foreach (DocumentSnapshot documentSnapshot in q.Documents)
-            {
-                DocumentReference doc = db.Collection("Party").Document(documentSnapshot.Id);
-                await doc.DeleteAsync();
-
-            }
-            party_del_id = p.Id.ToString();
-
-            DocumentReference delDoc = db.Collection("DelRecord").Document("Del");
-            Dictionary<string, object> d = new Dictionary<string, object>();
-            d.Add("PartyId", party_del_id);
-            await delDoc.UpdateAsync(d);
-
-        }
-        #endregion
-
-        #region "Ledger Update"
-        private async Task Ledger_Update()
-        {
-            if (ledger_ts == "0")
-            {
-
-                CollectionReference col = db.Collection("Ledger");
-                Query qry = col.OrderByDescending("ts").Limit(1);
-                QuerySnapshot querySnapshot = await qry.GetSnapshotAsync();
-                if (querySnapshot.Count == 0)
-                {
-                    ledger_ts = "0";
-                }
-                else
-                {
-                    foreach (DocumentSnapshot dc in querySnapshot.Documents)
-                    {
-                        Dictionary<string, object> _ledger = dc.ToDictionary();
-                        ledger_ts = _ledger["ts"].ToString();
-                    }
-                }
-            }
-            string connetionString;
-            SqlConnection sqlCnn;
-            SqlCommand sqlCmd;
-            string sql;
-
-            connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
-            sql = "SELECT * FROM Web_vw_Ledger WHERE ts>" + ledger_ts + " ORDER BY ts";
-
-            sqlCnn = new SqlConnection(connetionString);
-            try
-            {
-                sqlCnn.Open();
-                sqlCmd = new SqlCommand(sql, sqlCnn);
-                SqlDataReader sqlReader = sqlCmd.ExecuteReader();
-                while (sqlReader.Read())
-                {
-                    Ledger g = new Ledger();
-                    g.Id = sqlReader.GetInt32(0);
-                    g.PartyID = sqlReader.GetInt32(1);
-                    if (sqlReader.IsDBNull(2))
-                    {
-                        g.VocNo = null;
-                    }
-                    else
-                    {
-                        g.VocNo = sqlReader.GetInt32(2);
-                    }
-
-                    g.Date = sqlReader.GetDateTime(3).ToUniversalTime();
-                    g.TType = sqlReader.GetString(4);
-                    g.Description = sqlReader.IsDBNull(5) ? null : sqlReader.GetString(5);
-                    if (sqlReader.IsDBNull(6))
-                    {
-                        g.Debit = null;
-                    }
-                    else
-                    {
-                        g.Debit = sqlReader.GetInt64(6);
-                    }
-                    if (sqlReader.IsDBNull(7))
-                    {
-                        g.Credit = null;
-                    }
-                    else
-                    {
-                        g.Credit = sqlReader.GetInt64(7);
-                    }
-                    g.ts = sqlReader.GetInt32(8);
-
-                    AddOrUpdate_Ledger_Store(g);
-                }
-                sqlReader.Close();
-                sqlCmd.Dispose();
-                sqlCnn.Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Can not open connection ! " + ex.ToString());
-            }
-
-        }
-        private async void AddOrUpdate_Ledger_Store(Ledger g)
-        {
-            Query qry = db.Collection("Ledger").WhereEqualTo("Id", g.Id);
-            QuerySnapshot snp = await qry.GetSnapshotAsync();
-            if (snp.Count() > 0)
-            {
-                Update_Ledger_Store(snp.Documents[0].Id, g);
-            }
-            else
-            {
-                CollectionReference doc = db.Collection("Ledger");
-                await doc.AddAsync(g);
-                ledger_ts = g.ts.ToString();
-            }
-        }
-
-        private async void Update_Ledger_Store(string docID, Ledger upd)
-        {
-            DocumentReference doc = db.Collection("Ledger").Document(docID);
-            Dictionary<string, object> data = new Dictionary<string, object>()
-            {
-                    { "Id", upd.Id },
-                    { "PartyID", upd.PartyID },
-                    { "VocNo", upd.VocNo },
-                    { "Date", upd.Date },
-                    { "TType", upd.TType },
-                    { "Description", upd.Description },
-                    { "ts", upd.ts }
-            };
-
-            DocumentSnapshot snp = await doc.GetSnapshotAsync();
-            if (snp.Exists)
-            {
-                Ledger cur = snp.ConvertTo<Ledger>();
-                bool isSame = cur.Id == upd.Id;
-                if (isSame) isSame = cur.PartyID == upd.PartyID;
-                if (isSame) isSame = cur.VocNo == upd.VocNo;
-                if (isSame) isSame = cur.Date == upd.Date;
-                if (isSame) isSame = cur.TType == upd.TType;
-                if (isSame) isSame = cur.Description == upd.Description;
-                if (isSame) isSame = cur.ts == upd.ts;
-                if (!isSame) await doc.SetAsync(upd);
-            }
-        }
-        private async Task Ledger_Delete()
-        {
-            if (ledger_del_id == "0")
-            {
-                DocumentReference doc = db.Collection("DelRecord").Document("Del");
-                DocumentSnapshot snp = await doc.GetSnapshotAsync();
-                if (!snp.Exists)
-                {
-                    ledger_del_id = "0";
-                }
-                else
-                {
-                    Dictionary<string, object> del = snp.ToDictionary();
-                    ledger_del_id = del["LedgerId"].ToString();
-                }
-            }
-            string connetionString = null;
-            SqlConnection sqlCnn;
-            SqlCommand sqlCmd;
-            string sql;
-            connetionString = ConfigurationManager.ConnectionStrings["Db1"].ConnectionString;
-            sql = "SELECT id, delID FROM tbl_Ledger_Del WHERE id>" + ledger_del_id + " ORDER BY id";
-
-            sqlCnn = new SqlConnection(connetionString);
-            try
-            {
-                sqlCnn.Open();
-                sqlCmd = new SqlCommand(sql, sqlCnn);
-                SqlDataReader sqlReader = sqlCmd.ExecuteReader();
-                while (sqlReader.Read())
-                {
-                    DelTable p = new DelTable();
-                    p.Id = sqlReader.GetInt32(0);
-                    p.DelID = sqlReader.GetInt32(1);
-                    Delete_Ledger_Store(p);
-
-                }
-                sqlReader.Close();
-                sqlCmd.Dispose();
-                sqlCnn.Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Can not open connection ! " + ex.ToString());
-            }
-
-        }
-
-        private async void Delete_Ledger_Store(DelTable d)
-        {
-            Query qry = db.Collection("Ledger").WhereEqualTo("Id", d.DelID);
-            QuerySnapshot q = await qry.GetSnapshotAsync();
-
-            foreach (DocumentSnapshot documentSnapshot in q.Documents)
-            {
-                DocumentReference doc = db.Collection("Ledger").Document(documentSnapshot.Id);
-                await doc.DeleteAsync();
-            }
-            ledger_del_id = d.Id.ToString();
-
-            DocumentReference delDoc = db.Collection("DelRecord").Document("Del");
-            Dictionary<string, object> data = new Dictionary<string, object>();
-            data.Add("LedgerId", ledger_del_id);
-            await delDoc.UpdateAsync(data);
-        }
-        #endregion
-
-        private async void button2_Click(object sender, EventArgs e)
+        private async void btnManualSync_Click(object sender, EventArgs e)
         {
             await UpdateAll();
         }
@@ -412,13 +227,13 @@ namespace ImranFireTest
             {
                 lblStat.Text = "Running Party_Update Batch Operation";
                 lblStat.ForeColor = Color.LightGoldenrodYellow;
-                await Party_Update();
-                lblStat.Text = "Running Ledger_Update Batch Operation";
-                await Ledger_Update();
+                await PartyUpdate();
                 lblStat.Text = "Running Party_Delete Batch Operation";
-                await Party_Delete();
+                await PartyDelete();
+                lblStat.Text = "Running Ledger_Update Batch Operation";
+                await LedgerUpdate();
                 lblStat.Text = "Running Ledger_Delete Batch Operation";
-                await Ledger_Delete();
+                await LedgerDelete();
                 lblStat.Text = "All Batch Operations Completed.";
                 lblStat.ForeColor = Color.DarkGreen;
             }
@@ -434,7 +249,7 @@ namespace ImranFireTest
         {
             lblStat.Text = "Starting to sync with cloud";
             lblStat.ForeColor = Color.DarkGreen;
-            await Task.Delay(1000);
+            await Task.Delay(10000);
             await UpdateAll();
 
         }
@@ -452,6 +267,16 @@ namespace ImranFireTest
             btnStopTimer.Enabled = false;
             btnStartTimer.Enabled = true;
 
+        }
+
+        private async void button4_Click(object sender, EventArgs e)
+        {
+            await LedgerUpdate();
+        }
+
+        private async void button5_Click(object sender, EventArgs e)
+        {
+            await LedgerDelete();
         }
     }
 }
