@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Configuration;
-using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ImranFireTest.Model;
@@ -48,11 +43,9 @@ namespace ImranFireTest
             //3
             while (dr.Read())
             {
-                Console.WriteLine(dr.GetString(1));
                 AddToPartyCollection(dr);
             }
             dr.Close();
-            Console.WriteLine("Party TimeStamp: " + party_ts);
             ///////////////////////////////////////////////////END PARTY ALGORITHM/////////////////////////////////////////////////////////////////
             lblStat.Text = "Running Party_Update Batch Operation till " + party_ts + " timestamp";
 
@@ -79,39 +72,28 @@ namespace ImranFireTest
         #region Party Delete Algorithm
         private async Task PartyDelete()
         {
-            ////////////////////////////////////////////////////////PARTY DEL ALGORITHM////////////////////////////////////////////////////////////////
-            /* ALGORITHM
-            1.Get Max Ts
-            2.Get Results From SqlServer > ts
-            3.loop start
-                AddParty() Method
-            4.loop end
-            */
-            ////////////////////////////////////////////////////////PARTY ALGORITHM////////////////////////////////////////////////////////////////
             //1
-            party_del_ts = db.MaxTs("PartyDel");
+            party_del_ts = db.MaxTs("Party_Del");
             //2
             SqlHelper h = new SqlHelper();
-            SqlDataReader dr = h.GetReaderBySQL("SELECT * FROM web_vw_party_del WHERE ts>" + party_del_ts + " Order By ts");
+            SqlDataReader dr = h.GetReaderBySQL("SELECT * FROM tbl_party_del WHERE ts>" + party_del_ts + " Order By ts");
             //3
             while (dr.Read())
             {
-                Console.WriteLine(dr.GetString(1));
                 AddToPartyDelCollection(dr);
             }
             dr.Close();
-            Console.WriteLine("Party Del TimeStamp: " + party_del_ts);
             ///////////////////////////////////////////////////END PARTY ALGORITHM/////////////////////////////////////////////////////////////////
             lblStat.Text = "Running Party_Delete Batch Operation till " + party_del_ts + " timestamp";
         }
 
         private static void AddToPartyDelCollection(SqlDataReader sqlReader)
         {
-            PartyDelLog p = new PartyDelLog();
+            Party_Del p = new Party_Del();
             p.DelId = sqlReader.GetInt32(0);
             p.ts = sqlReader.GetInt32(1);
-            db.InsertRecord<PartyDelLog>("PartyDelLog", p);
             db.DeleteRecord<Party>("Party", p.DelId);
+            db.InsertRecord<Party_Del>("Party_Del", p);
             party_del_ts = p.ts.ToString();
         }
         #endregion
@@ -128,11 +110,9 @@ namespace ImranFireTest
             //3
             while (dr.Read())
             {
-                Console.WriteLine(dr.GetString(1));
                 AddToLedgerCollection(dr);
             }
             dr.Close();
-            Console.WriteLine("Party TimeStamp: " + party_ts);
             ///////////////////////////////////////////////////END PARTY ALGORITHM/////////////////////////////////////////////////////////////////
             lblStat.Text = "Running Ledger_Update Batch Operation till " + ledger_ts + " timestamp";
         }
@@ -185,36 +165,34 @@ namespace ImranFireTest
         private async Task LedgerDelete()
         {
             //1
-            ledger_del_ts = db.MaxTs("LedgerDelLog");
+            ledger_del_ts = db.MaxTs("Ledger_Del");
             //2
             SqlHelper h = new SqlHelper();
-            SqlDataReader dr = h.GetReaderBySQL("SELECT * FROM tbl_ledger_del WHERE ts>" + ledger_del_ts + " Order By ts");
+            SqlDataReader dr = h.GetReaderBySQL("SELECT DelId,ts FROM tbl_ledger_del WHERE ts>" + ledger_del_ts + " Order By ts");
             //3
             while (dr.Read())
             {
-                Console.WriteLine(dr.GetString(1));
                 AddToLedgerDelCollection(dr);
             }
             dr.Close();
-            Console.WriteLine("Ledger Del TimeStamp: " + ledger_del_ts);
             ///////////////////////////////////////////////////END PARTY ALGORITHM/////////////////////////////////////////////////////////////////
             lblStat.Text = "Running Ledger_Delete Batch Operation till " + ledger_del_ts + " timestamp";
         }
 
         private static void AddToLedgerDelCollection(SqlDataReader sqlReader)
         {
-            LedgerDelLog p = new LedgerDelLog();
+            Ledger_Del p = new Ledger_Del();
             p.DelId = sqlReader.GetInt32(0);
             p.ts = sqlReader.GetInt32(1);
-            db.InsertRecord<LedgerDelLog>("PartyDelLog", p);
             db.DeleteRecord<Ledger>("Ledger", p.DelId);
+            db.InsertRecord<Ledger_Del>("Ledger_Del", p);
             ledger_del_ts = p.ts.ToString();
         }
         #endregion
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            await PartyDelete();
+            await PartyUpdate();
         }
 
         private async void btnManualSync_Click(object sender, EventArgs e)
@@ -277,6 +255,15 @@ namespace ImranFireTest
         private async void button5_Click(object sender, EventArgs e)
         {
             await LedgerDelete();
+        }
+
+        private async void button3_Click(object sender, EventArgs e)
+        {
+            await PartyDelete();
+        }
+
+        private void btnTest_Click(object sender, EventArgs e)
+        {
         }
     }
 }

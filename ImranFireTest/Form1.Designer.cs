@@ -37,13 +37,13 @@ namespace ImranFireTest
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.btnStartTimer = new System.Windows.Forms.Button();
             this.btnStopTimer = new System.Windows.Forms.Button();
-            this.colorDialog1 = new System.Windows.Forms.ColorDialog();
             this.panel1 = new System.Windows.Forms.Panel();
             this.label1 = new System.Windows.Forms.Label();
             this.panel2 = new System.Windows.Forms.Panel();
             this.button3 = new System.Windows.Forms.Button();
             this.button4 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
+            this.btnTest = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
             this.SuspendLayout();
@@ -144,7 +144,7 @@ namespace ImranFireTest
             this.button3.TabIndex = 0;
             this.button3.Text = "Delete Party";
             this.button3.UseVisualStyleBackColor = true;
-            this.button3.Click += new System.EventHandler(this.button1_Click);
+            this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
             // button4
             // 
@@ -166,6 +166,16 @@ namespace ImranFireTest
             this.button5.UseVisualStyleBackColor = true;
             this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
+            // btnTest
+            // 
+            this.btnTest.Location = new System.Drawing.Point(516, 214);
+            this.btnTest.Name = "btnTest";
+            this.btnTest.Size = new System.Drawing.Size(109, 23);
+            this.btnTest.TabIndex = 0;
+            this.btnTest.Text = "Test";
+            this.btnTest.UseVisualStyleBackColor = true;
+            this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -178,6 +188,7 @@ namespace ImranFireTest
             this.Controls.Add(this.btnStopTimer);
             this.Controls.Add(this.btnStartTimer);
             this.Controls.Add(this.btn_ManualSync);
+            this.Controls.Add(this.btnTest);
             this.Controls.Add(this.button5);
             this.Controls.Add(this.button4);
             this.Controls.Add(this.button3);
@@ -202,13 +213,13 @@ namespace ImranFireTest
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.Button btnStartTimer;
         private System.Windows.Forms.Button btnStopTimer;
-        private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Panel panel2;
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.Button button4;
         private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.Button btnTest;
     }
 }
 

@@ -7,6 +7,7 @@ namespace ImranFireTest.Model
     class Party
     {
         [BsonId]
+        [BsonIgnoreIfDefault]
         public Guid _Id { get; set; }
         [BsonElement("Id")]
         public int Id { get; set; }

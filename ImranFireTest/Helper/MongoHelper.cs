@@ -4,12 +4,13 @@ using System.Collections.Generic;
 using System;
 using System.Configuration;
 using ImranFireTest.Model;
+using System.Reflection;
 
 namespace ImranFireTest
 {
     public class MongoHelper
     {
-        //private string conStr = "mongodb://asif:007302420@cluster0-shard-00-00.k6lme.mongodb.net:27017,cluster0-shard-00-01.k6lme.mongodb.net:27017,cluster0-shard-00-02.k6lme.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-9yuzik-shard-0&authSource=admin&retryWrites=true&w=majority";
+        //private string conStr = "mongodb://asif:cosoft@cluster0-shard-00-00.k6lme.mongodb.net:27017,cluster0-shard-00-01.k6lme.mongodb.net:27017,cluster0-shard-00-02.k6lme.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-9yuzik-shard-0&authSource=admin&retryWrites=true&w=majority";
         private string conStr = ConfigurationManager.AppSettings["MongoCon"];
 
         private IMongoDatabase db;
@@ -53,9 +54,15 @@ namespace ImranFireTest
             var col = db.GetCollection<T>(table);
             var result = col.ReplaceOne(
                 new BsonDocument("_id", _id),
-                record,
-                new ReplaceOptions { IsUpsert = true });
+                record);
         }
+        //public void UpsertLedger(Guid _id, Ledger record)
+        //{
+        //    var filter = Builders<BsonDocument>.Filter.Eq("_id", _id);
+        //    var update = Builders<BsonDocument>.Update.Set("class_id", 483);
+
+        //    var col = db.GetCollection<Ledger>("Ledger");
+        //}
         public void DeleteRecord<T>(string table, int id)
         {
             var col = db.GetCollection<T>(table);

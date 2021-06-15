@@ -199,8 +199,8 @@
     <Compile Include="Models\DelTable.cs" />
     <Compile Include="Models\Party.cs" />
     <Compile Include="Model\Ledger.cs" />
-    <Compile Include="Model\LedgerDelLog.cs" />
-    <Compile Include="Model\PartyDelLog.cs" />
+    <Compile Include="Model\Ledger_Del.cs" />
+    <Compile Include="Model\Party_Del.cs" />
     <Compile Include="Model\Party.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
